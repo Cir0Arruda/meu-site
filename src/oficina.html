@@ -203,76 +203,76 @@ function I(t, x, y, extra = {}) {
   return Object.assign({ id: uid(), t, nome: T.nome, x, y, w: T.w, h: T.h, rot: 0, trava: false }, extra);
 }
 function layoutAtual() {
+  // Norte = parede de cima (janelas + porta "Oficina Automobilística")
+  // Leste = parede da direita (portão do pátio)
+  // Sul = parede de baixo (salas envidraçadas) · Oeste = área de aula
   const L = [];
-  // piso bege junto às paredes (o resto é epóxi cinza)
-  L.push(I("passeio", 0, 4.0, { w: 30, h: 1.4, trava: true }));
-  L.push(I("passeio", 0, 21.8, { w: 48, h: 2.2, trava: true }));
-  // salas envidraçadas na parede norte
-  L.push(I("sala", 0, 0, { w: 11, h: 4, nome: "Sala 1", trava: true }));
-  L.push(I("sala", 11, 0, { w: 10, h: 4, nome: "Sala 2", trava: true }));
-  L.push(I("sala", 21, 0, { w: 9, h: 4, nome: "Sala 3", trava: true }));
-  // portões pro pátio na parede sul, com pilar dos dois lados
-  L.push(I("portao", 3, 23.7, { nome: "Portão 1 (pátio)", trava: true }));
-  L.push(I("portao", 20, 23.7, { nome: "Portão 2 (pátio)", trava: true }));
-  L.push(I("porta", 47.7, 6, { rot: 90, trava: true }));
-  for (const x of [8, 16, 24, 32, 40]) L.push(I("pilar", x, 4.3, { trava: true }));
-  for (const x of [2.1, 8.3, 19.1, 25.3, 33, 41]) L.push(I("pilar", x, 23.1, { trava: true }));
-  L.push(I("extintor", 25.4, 22.6));
-  // exaustores (enroladores azuis no teto)
-  L.push(I("exaustor", 5.5, 14.3));
-  L.push(I("exaustor", 21.5, 20.0));
-  L.push(I("exaustor", 29.8, 13.2));
-  // alinhamento: plataforma perto do portão 1, alinhador colado no pilar
-  L.push(I("plataforma", 3.0, 16.8));
-  L.push(I("alinhador", 9.1, 21.9));
-  // área didática perto do portão 2: armários de vidro com os câmbios na frente
-  L.push(I("pc", 8.6, 19.6));
-  L.push(I("armario", 10.0, 19.6));
-  L.push(I("armario", 12.5, 19.6));
-  L.push(I("armario", 15.0, 19.6));
-  L.push(I("transm", 10.2, 18.0));
-  L.push(I("transm", 11.8, 18.0));
-  L.push(I("transm", 13.4, 18.0));
-  L.push(I("transm", 15.0, 18.0));
-  L.push(I("transm", 16.6, 18.0, { nome: "Câmbio no suporte azul", cor: "#3f6f99" }));
-  L.push(I("carrver", 17.7, 19.7));
-  L.push(I("carrazul", 18.6, 19.6));
-  L.push(I("estante", 13.0, 22.9, { rot: 180 }));
-  L.push(I("painel", 15.0, 22.9, { rot: 180 }));
-  L.push(I("painel", 16.8, 22.9, { rot: 180 }));
-  L.push(I("volante", 19.4, 17.6));
-  L.push(I("volante", 20.4, 17.6));
-  L.push(I("bancada", 22.2, 17.4, { w: 1.6 }));
-  // bancadas no meio do galpão
-  L.push(I("bancmotor", 3.0, 7.5));
-  L.push(I("bancmotor", 3.0, 9.4));
-  L.push(I("bancada", 9.5, 8.0));
-  L.push(I("bancada", 12.5, 8.0));
-  L.push(I("bancada", 9.5, 10.6));
-  L.push(I("bancada", 12.5, 10.6));
-  L.push(I("bancmotor", 16.5, 8.0));
-  L.push(I("bancmotor", 16.5, 10.6));
-  L.push(I("bancada", 20.5, 9.3));
-  // ferramental espalhado
-  L.push(I("carrver", 2.0, 11.4));
-  L.push(I("carrazul", 3.0, 11.4));
-  L.push(I("carrver", 15.0, 8.2));
-  L.push(I("carrazul", 19.4, 11.0));
-  L.push(I("carrver", 24.2, 11.5));
-  L.push(I("carrazul", 25.2, 11.5));
-  L.push(I("gabinete", 7.6, 10.9));
-  L.push(I("gabinete", 19.2, 8.0));
-  // elevador de 2 colunas no fundo, antes da área de aula
-  L.push(I("elev2", 28.5, 9.2));
-  // área de aula
-  for (const y of [6.5, 9.0, 11.5, 14.0, 16.5]) L.push(I("mesas", 37.5, y));
+  // piso bege: junto ao portão (leste) e na frente das salas (sul)
+  L.push(I("passeio", 45.4, 5.8, { w: 2.6, h: 18.2, trava: true }));
+  L.push(I("passeio", 17, 18.8, { w: 28.4, h: 1.2, trava: true }));
+  // parede norte: porta com a placa e pilares (um com extintor)
+  L.push(I("porta", 30.0, 0, { nome: "Porta (placa Oficina Automobilística)", trava: true }));
+  L.push(I("porta", 41.0, 0, { trava: true }));
+  for (const x of [7, 14, 21, 28, 35, 42]) L.push(I("pilar", x, 0, { trava: true }));
+  L.push(I("extintor", 35.1, 0.65));
+  // parede leste: portão com pilar dos dois lados
+  L.push(I("portao", 47.7, 8.5, { rot: 90, nome: "Portão (pátio)", trava: true }));
+  L.push(I("pilar", 47.4, 7.8, { trava: true }));
+  L.push(I("pilar", 47.4, 13.6, { trava: true }));
+  // parede sul: salas envidraçadas
+  L.push(I("sala", 18, 20, { w: 9, h: 4, nome: "Sala 1", rot: 180, trava: true }));
+  L.push(I("sala", 27, 20, { w: 9, h: 4, nome: "Sala 2", rot: 180, trava: true }));
+  L.push(I("sala", 36, 20, { w: 9, h: 4, nome: "Sala 3", rot: 180, trava: true }));
+  for (const x of [7, 14]) L.push(I("pilar", x, 23.4, { trava: true }));
+  // alinhamento: plataforma na frente do portão, alinhador colado no pilar
+  L.push(I("plataforma", 41.4, 8.4, { rot: 90 }));
+  L.push(I("alinhador", 45.7, 14.5));
+  L.push(I("exaustor", 44.1, 10.4));
+  L.push(I("exaustor", 39.6, 13.8));
+  // do outro lado do portão: painéis de lanternas e posto com PC
+  L.push(I("painel", 47.4, 2.0, { rot: 90 }));
+  L.push(I("painel", 47.4, 3.8, { rot: 90 }));
+  L.push(I("pc", 46.6, 5.8, { rot: 90 }));
+  // canto nordeste: estante, simuladores de volante, bancadinha
+  L.push(I("estante", 43.0, 0.15));
+  L.push(I("volante", 43.4, 1.8));
+  L.push(I("volante", 44.5, 1.8));
+  L.push(I("bancada", 42.6, 3.6, { w: 1.6 }));
+  // câmbios enfileirados na frente dos armários de vidro
+  L.push(I("armario", 38.2, 1.6, { rot: 90 }));
+  L.push(I("armario", 38.2, 4.1, { rot: 90 }));
+  L.push(I("armario", 38.2, 6.6, { rot: 90 }));
+  L.push(I("transm", 36.6, 1.8, { rot: 90 }));
+  L.push(I("transm", 36.6, 3.4, { rot: 90 }));
+  L.push(I("transm", 36.6, 5.0, { rot: 90 }));
+  L.push(I("transm", 36.6, 6.6, { rot: 90 }));
+  L.push(I("transm", 36.6, 8.2, { rot: 90, nome: "Câmbio no suporte azul", cor: "#3f6f99" }));
+  L.push(I("carrver", 38.4, 9.4));
+  L.push(I("carrazul", 39.3, 9.4));
+  // bancadas na frente da parede norte
+  for (const y of [3.2, 6.2]) {
+    for (const x of [16, 19, 22]) L.push(I("bancada", x, y));
+    for (const x of [25.5, 28.5]) L.push(I("bancmotor", x, y));
+  }
+  L.push(I("bancada", 31.8, 9.4));
+  L.push(I("gabinete", 30.8, 9.5));
+  L.push(I("carrver", 21.8, 8.6));
+  L.push(I("carrazul", 22.7, 8.6));
+  L.push(I("carrver", 14.8, 3.4));
+  L.push(I("carrazul", 32.4, 12.4));
+  L.push(I("carrver", 33.4, 12.4));
+  L.push(I("gabinete", 27.5, 9.6));
+  // elevador de 2 colunas na frente das salas
+  L.push(I("elev2", 24.0, 16.0));
+  // área de aula no fundo (oeste)
+  for (const x of [2.5, 5.0, 7.5, 10.0]) L.push(I("mesas", x, 7.0, { rot: 90 }));
   return { galpao: { w: 48, h: 24 }, itens: L };
 }
 
 // =====================================================================
 // Estado, histórico, armazenamento
 // =====================================================================
-const CHAVE = "oficina-3d-v2";
+const CHAVE = "oficina-3d-v3";
 let estado, sel = null, hist = [], fut = [];
 let nomes = true, medidas = true, vistaCima = false;
 
