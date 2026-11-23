@@ -1,18 +1,737 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Meu Site</title>
-  <style>
-    body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }
-    h1 { font-size: 2.5rem; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout da Oficina</title>
+<meta name="description" content="Planta editável da oficina automobilística: arraste, gire e reorganize os equipamentos.">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --ink: #1d2433;
+    --muted: #5b6475;
+    --line: #dde1e7;
+    --accent: #1f6feb;
+    --accent-ink: #ffffff;
+    --danger: #c62828;
+    --canvas: #e6e9ee;
+    --chip: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1a1f27; --ink: #e7ebf2; --muted: #9aa4b5;
+      --line: #2c3340; --accent: #4c8dff; --accent-ink: #0b1220; --danger: #ff6b6b;
+      --canvas: #0e1116; --chip: #242b36;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --panel: #1a1f27; --ink: #e7ebf2; --muted: #9aa4b5;
+    --line: #2c3340; --accent: #4c8dff; --accent-ink: #0b1220; --danger: #ff6b6b;
+    --canvas: #0e1116; --chip: #242b36;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+  .tag {
+    font-size: 12px; color: var(--muted); background: var(--chip);
+    padding: 3px 8px; border-radius: 999px;
+  }
+  .toolbar { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+  button, .btn {
+    font: inherit; color: var(--ink); background: var(--chip);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+    cursor: pointer; white-space: nowrap;
+  }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; border-color: var(--line); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.danger { color: var(--danger); }
+  main { flex: 1; display: flex; min-height: 0; }
+  #palco { flex: 1; position: relative; min-width: 0; background: var(--canvas); }
+  #planta { width: 100%; height: 100%; display: block; touch-action: none; user-select: none; cursor: grab; }
+  #planta.panning { cursor: grabbing; }
+  #status {
+    position: absolute; left: 10px; bottom: 10px; font-size: 12px; color: var(--muted);
+    background: var(--panel); border: 1px solid var(--line); padding: 4px 8px; border-radius: 6px;
+    pointer-events: none;
+  }
+  #zoom { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 4px; }
+  #zoom button { background: var(--panel); min-width: 34px; }
+  aside {
+    width: 330px; flex-shrink: 0; overflow-y: auto; background: var(--panel);
+    border-left: 1px solid var(--line); padding: 12px 14px 24px;
+  }
+  aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 8px; }
+  aside h2:first-child { margin-top: 2px; }
+  .vazio { color: var(--muted); font-size: 13px; margin: 0; }
+  .campos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .campos label { display: flex; flex-direction: column; font-size: 12px; color: var(--muted); gap: 3px; }
+  .campos label.full { grid-column: 1 / -1; }
+  input[type=text], input[type=number] {
+    font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 7px; width: 100%;
+  }
+  input[type=color] { width: 100%; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); padding: 2px; }
+  .acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  details { border-top: 1px solid var(--line); padding-top: 4px; }
+  summary { cursor: pointer; font-weight: 600; padding: 8px 0; list-style: none; display: flex; align-items: center; gap: 8px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "▸"; margin-left: auto; color: var(--muted); transition: transform .15s; }
+  details[open] summary::after { transform: rotate(90deg); }
+  .paleta { display: grid; gap: 4px; padding-bottom: 8px; }
+  .paleta button {
+    display: flex; align-items: center; gap: 8px; text-align: left; background: transparent;
+    border-color: transparent; padding: 5px 6px;
+  }
+  .paleta button:hover { background: var(--chip); border-color: var(--line); }
+  .paleta small { color: var(--muted); margin-left: auto; font-size: 11px; }
+  .cor { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; border: 1px solid rgba(0,0,0,.25); }
+  .dica { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .dica kbd { font: 11px ui-monospace, monospace; background: var(--chip); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: .2s; pointer-events: none; z-index: 10; max-width: calc(100% - 32px);
+  }
+  #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (max-width: 820px) {
+    body { height: auto; min-height: 100%; }
+    main { flex-direction: column; }
+    #palco { height: 62vh; flex: none; }
+    aside { width: 100%; border-left: 0; border-top: 1px solid var(--line); }
+    .toolbar { margin-left: 0; }
+  }
+</style>
 </head>
 <body>
-  <main>
-    <h1>Tá no ar! :3</h1>
-    <p>Site hospedado no GitHub Pages.</p>
-  </main>
+<header>
+  <h1>Layout da Oficina Automobilística</h1>
+  <span class="tag" id="tagEstado">Rascunho do layout atual · medidas aproximadas</span>
+  <div class="toolbar">
+    <button id="bDesfazer" title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
+    <button id="bRefazer" title="Refazer (Ctrl+Y)">↷ Refazer</button>
+    <button id="bMedidas" title="Mostrar distâncias do item selecionado até as paredes">📏 Distâncias</button>
+    <button id="bGrade">▦ Grade</button>
+  </div>
+</header>
+<main>
+  <div id="palco">
+    <svg id="planta" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Planta da oficina"></svg>
+    <div id="status">Arraste os equipamentos · roda do mouse = zoom</div>
+    <div id="zoom">
+      <button id="zMenos" title="Diminuir zoom">−</button>
+      <button id="zAjustar" title="Ajustar à tela">⤢</button>
+      <button id="zMais" title="Aumentar zoom">+</button>
+    </div>
+  </div>
+  <aside>
+    <h2>Selecionado</h2>
+    <div id="painelSel"></div>
+
+    <details open>
+      <summary>Adicionar equipamento</summary>
+      <div id="paleta"></div>
+    </details>
+
+    <details>
+      <summary>Galpão</summary>
+      <div class="campos">
+        <label>Comprimento (m)<input type="number" id="gW" min="5" max="200" step="0.5"></label>
+        <label>Largura (m)<input type="number" id="gH" min="5" max="200" step="0.5"></label>
+      </div>
+      <p class="dica">Mede o galpão (nem que seja contando passos ≈ 0,75 m cada) e corrige aqui. Depois ajusta pilares, portões e salas.</p>
+    </details>
+
+    <details open>
+      <summary>Salvar e compartilhar</summary>
+      <div class="acoes">
+        <button id="bLink" class="primary">🔗 Copiar link do layout</button>
+        <button id="bCopiar">📋 Copiar como texto</button>
+        <button id="bPng">🖼️ Baixar imagem</button>
+        <button id="bJson">💾 Baixar .json</button>
+        <button id="bAbrir">📂 Abrir .json</button>
+        <button id="bReset" class="danger">↺ Voltar ao layout atual</button>
+      </div>
+      <input type="file" id="arquivo" accept=".json,application/json" hidden>
+      <p class="dica">O layout fica salvo neste navegador automaticamente. O <b>link</b> carrega o layout inteiro em quem abrir. O <b>texto</b> dá pra colar no chat com o Claude.</p>
+    </details>
+
+    <details>
+      <summary>Atalhos</summary>
+      <p class="dica">
+        Arrastar item: mover · Arrastar fundo: navegar · Roda/pinça: zoom<br>
+        <kbd>R</kbd> girar · <kbd>D</kbd> duplicar · <kbd>Del</kbd> apagar · setas: mover 0,25 m (<kbd>Shift</kbd> = 1 m)<br>
+        <kbd>Ctrl</kbd>+<kbd>Z</kbd> desfazer · <kbd>Ctrl</kbd>+<kbd>Y</kbd> refazer · <kbd>Esc</kbd> desmarcar
+      </p>
+    </details>
+  </aside>
+</main>
+<div id="toast"></div>
+
+<script>
+(() => {
+"use strict";
+
+// ---------- Catálogo ----------
+const CAT = {
+  veic: { nome: "Elevadores e alinhamento", cor: "#f4a261" },
+  banc: { nome: "Bancadas",                 cor: "#d4a373" },
+  ferr: { nome: "Ferramental e armazenagem", cor: "#e63946" },
+  dida: { nome: "Didático",                 cor: "#2a9d8f" },
+  info: { nome: "Computadores e aula",      cor: "#a9b6cc" },
+  estr: { nome: "Estrutura",                cor: "#6c757d" },
+  area: { nome: "Áreas e marcações",        cor: "#ffd166" },
+};
+const TIPOS = {
+  plataforma: { nome: "Elevador plataforma (alinhamento)", cat: "veic", w: 5.2, h: 2.2, deco: "trilhos", cor: "#3d7ea6" },
+  elev2:      { nome: "Elevador 2 colunas",       cat: "veic", w: 3.6, h: 1.4, deco: "colunas" },
+  alinhador:  { nome: "Alinhador computadorizado", cat: "veic", w: 1.2, h: 0.9, cor: "#3a3f47" },
+  exaustor:   { nome: "Exaustor de gases (teto)", cat: "veic", w: 1.2, h: 1.2, forma: "circulo", cor: "#4a78b5" },
+  bancada:    { nome: "Bancada c/ morsa",         cat: "banc", w: 2.0, h: 0.9 },
+  bancmotor:  { nome: "Bancada c/ motor",         cat: "banc", w: 2.0, h: 0.9, cor: "#b98552" },
+  carrver:    { nome: "Carrinho de ferramentas",  cat: "ferr", w: 0.8, h: 0.5, cor: "#e63946" },
+  carrazul:   { nome: "Gaveteiro azul",           cat: "ferr", w: 0.8, h: 0.6, cor: "#457b9d" },
+  gabinete:   { nome: "Gabinete / scanner",       cat: "ferr", w: 0.8, h: 0.6, cor: "#2b2f36" },
+  estante:    { nome: "Estante metálica",         cat: "ferr", w: 1.5, h: 0.6, cor: "#9aa3ad" },
+  transm:     { nome: "Câmbio em suporte",        cat: "dida", w: 1.4, h: 0.9 },
+  painel:     { nome: "Painel elétrico didático", cat: "dida", w: 1.6, h: 0.6, cor: "#e9ecef" },
+  armario:    { nome: "Armário de vidro",         cat: "dida", w: 2.5, h: 0.6, cor: "#cfe8ef" },
+  volante:    { nome: "Simulador de direção",     cat: "dida", w: 0.8, h: 0.8, cor: "#52b69a" },
+  pc:         { nome: "Posto c/ computador",      cat: "info", w: 1.2, h: 0.7 },
+  mesas:      { nome: "Fileira de mesas c/ PC",   cat: "info", w: 8.0, h: 0.8, cor: "#f1f3f5" },
+  pilar:      { nome: "Pilar",                    cat: "estr", w: 0.6, h: 0.6, cor: "#495057" },
+  sala:       { nome: "Sala envidraçada",         cat: "estr", w: 8.0, h: 4.0, cor: "#dbe3ea", deco: "sala" },
+  portao:     { nome: "Portão",                   cat: "estr", w: 5.0, h: 0.6, deco: "portao", cor: "#ffffff" },
+  porta:      { nome: "Porta",                    cat: "estr", w: 1.0, h: 0.4, deco: "portao", cor: "#ffffff" },
+  extintor:   { nome: "Extintor",                 cat: "estr", w: 0.4, h: 0.4, forma: "circulo", cor: "#d62828" },
+  zona:       { nome: "Zona / setor",             cat: "area", w: 8.0, h: 6.0, camada: 0, deco: "zona", cor: "#7fb3ff" },
+  corredor:   { nome: "Faixa de circulação",      cat: "area", w: 10, h: 1.5, camada: 0, deco: "faixa", cor: "#ffd166" },
+};
+
+// ---------- Layout atual (reconstruído das fotos) ----------
+let seq = 0;
+const uid = () => "i" + Date.now().toString(36) + (seq++).toString(36);
+function I(t, x, y, extra = {}) {
+  const T = TIPOS[t];
+  return Object.assign({ id: uid(), t, nome: T.nome, x, y, w: T.w, h: T.h, rot: 0, trava: false }, extra);
+}
+function layoutAtual() {
+  const L = [];
+  // Estrutura
+  L.push(I("sala", 0, 0, { w: 11, h: 4, nome: "Sala envidraçada 1", trava: true }));
+  L.push(I("sala", 11, 0, { w: 10, h: 4, nome: "Sala envidraçada 2", trava: true }));
+  L.push(I("sala", 21, 0, { w: 9, h: 4, nome: "Sala envidraçada 3", trava: true }));
+  L.push(I("portao", 3, 23.7, { nome: "Portão 1 (pátio)", trava: true }));
+  L.push(I("portao", 22, 23.7, { nome: "Portão 2 (pátio)", trava: true }));
+  L.push(I("porta", 47.8, 6, { rot: 90, nome: "Porta", trava: true }));
+  for (const x of [8, 16, 24, 32, 40]) L.push(I("pilar", x, 4.3, { trava: true }));
+  for (const x of [10, 21.2, 30, 38]) L.push(I("pilar", x, 23.1, { trava: true }));
+  // Alinhamento (perto do portão 1)
+  L.push(I("plataforma", 3.4, 17.5));
+  L.push(I("alinhador", 10.8, 18.2));
+  L.push(I("exaustor", 5.4, 14.2));
+  // Lateral esquerda: câmbios em suporte
+  L.push(I("transm", 0.4, 6.0, { rot: 90 }));
+  L.push(I("transm", 0.4, 7.8, { rot: 90 }));
+  L.push(I("transm", 1.6, 6.6, { rot: 90 }));
+  // Parede dos fundos das salas: estante, armários, posto PC, volantes
+  L.push(I("estante", 9.0, 4.9));
+  L.push(I("pc", 11.2, 5.0));
+  L.push(I("armario", 12.8, 5.0));
+  L.push(I("armario", 15.4, 5.0, { w: 2.0 }));
+  L.push(I("volante", 10.6, 7.2));
+  L.push(I("volante", 11.7, 7.2));
+  // Bancadas com motores e morsas
+  L.push(I("bancmotor", 3.0, 7.5));
+  L.push(I("bancmotor", 3.0, 9.2));
+  L.push(I("bancada", 13.5, 9.5));
+  L.push(I("bancada", 16.5, 9.5));
+  L.push(I("bancada", 13.5, 12.0));
+  L.push(I("bancada", 16.5, 12.0));
+  L.push(I("bancmotor", 20.0, 9.5));
+  L.push(I("bancmotor", 20.0, 12.0));
+  // Ferramental espalhado
+  L.push(I("carrver", 2.0, 11.2));
+  L.push(I("carrazul", 3.0, 11.2));
+  L.push(I("carrver", 18.6, 6.0));
+  L.push(I("carrver", 22.4, 9.6));
+  L.push(I("carrazul", 12.4, 12.1));
+  L.push(I("carrver", 9.6, 14.8));
+  L.push(I("gabinete", 11.0, 10.8));
+  L.push(I("gabinete", 24.0, 7.0));
+  // Painéis elétricos junto ao portão 2
+  L.push(I("painel", 17.6, 22.9));
+  L.push(I("painel", 19.4, 22.9));
+  // Elevador 2 colunas
+  L.push(I("elev2", 28.5, 9.0));
+  // Área de aula no fundo do galpão
+  for (const y of [6.5, 9.0, 11.5, 14.0, 16.5]) L.push(I("mesas", 37.5, y));
+  return { galpao: { w: 48, h: 24 }, itens: L };
+}
+
+// ---------- Estado ----------
+const CHAVE = "oficina-layout-v1";
+let estado = null;
+let sel = null;
+let hist = [], fut = [];
+let grade = true, medidas = true;
+
+function guardar() {
+  try { localStorage.setItem(CHAVE, JSON.stringify(estado)); } catch (e) {}
+}
+function valida(o) {
+  return o && o.galpao && +o.galpao.w > 0 && +o.galpao.h > 0 && Array.isArray(o.itens) &&
+         o.itens.every(i => TIPOS[i.t] && isFinite(i.x) && isFinite(i.y) && i.w > 0 && i.h > 0);
+}
+function normaliza(o) {
+  o.itens.forEach(i => { if (!i.id) i.id = uid(); i.rot = i.rot === 90 ? 90 : 0; i.trava = !!i.trava; if (!i.nome) i.nome = TIPOS[i.t].nome; });
+  return o;
+}
+function snapshot() { hist.push(JSON.stringify(estado)); if (hist.length > 150) hist.shift(); fut = []; }
+function mudou() { guardar(); render(); painel(); botoes(); }
+function desfazer() { if (!hist.length) return; fut.push(JSON.stringify(estado)); estado = JSON.parse(hist.pop()); if (sel && !acha(sel)) sel = null; mudou(); }
+function refazer() { if (!fut.length) return; hist.push(JSON.stringify(estado)); estado = JSON.parse(fut.pop()); if (sel && !acha(sel)) sel = null; mudou(); }
+const acha = id => estado.itens.find(i => i.id === id);
+const dims = it => it.rot === 90 ? { w: it.h, h: it.w } : { w: it.w, h: it.h };
+const r2 = v => Math.round(v * 100) / 100;
+const snap = v => Math.round(v * 4) / 4;
+const fmt = v => r2(v).toLocaleString("pt-BR");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const corDe = it => it.cor || TIPOS[it.t].cor || CAT[TIPOS[it.t].cat].cor;
+function textoEscuro(hex) {
+  const n = parseInt(hex.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150;
+}
+function escurece(hex, f = 0.65) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(v => Math.round(v * f));
+  return "#" + c.map(v => v.toString(16).padStart(2, "0")).join("");
+}
+
+// ---------- Desenho ----------
+const svg = document.getElementById("planta");
+let vb = { x: 0, y: 0, w: 50, h: 30 };
+
+function rotulo(it, d) {
+  const T = TIPOS[it.t];
+  let w = d.w, h = d.h, vertical = false;
+  if (h > w * 1.4) { vertical = true; [w, h] = [h, w]; }
+  let linhas = [it.nome];
+  if (it.nome.length > 12 && h >= 0.75) {
+    const meio = it.nome.length / 2;
+    let corte = -1, melhor = 1e9;
+    for (let k = 0; k < it.nome.length; k++) if (it.nome[k] === " " && Math.abs(k - meio) < melhor) { melhor = Math.abs(k - meio); corte = k; }
+    if (corte > 0) linhas = [it.nome.slice(0, corte), it.nome.slice(corte + 1)];
+  }
+  const maior = Math.max(...linhas.map(l => l.length));
+  const max = T.camada === 0 || T.deco === "sala" ? 0.7 : 0.42;
+  const fs = Math.min(max, h / (linhas.length * 1.3), w / (maior * 0.56));
+  if (fs < 0.13) return "";
+  const cor = T.deco === "zona" ? escurece(corDe(it), 0.55) : (textoEscuro(corDe(it)) ? "#1d2433" : "#ffffff");
+  const cx = d.w / 2, cy = d.h / 2;
+  const tr = vertical ? ` transform="rotate(-90 ${cx} ${cy})"` : "";
+  const y0 = cy - (linhas.length - 1) * fs * 0.6;
+  return `<text x="${cx}" y="${y0}" font-size="${fs}" fill="${cor}" text-anchor="middle" dominant-baseline="central"${tr} font-weight="${T.camada === 0 ? 700 : 600}">` +
+    linhas.map((l, k) => `<tspan x="${cx}" y="${y0 + k * fs * 1.2}">${esc(l)}</tspan>`).join("") + `</text>`;
+}
+
+function desenhaItem(it, exporta) {
+  const T = TIPOS[it.t], d = dims(it), c = corDe(it), borda = escurece(c, T.deco === "sala" ? 0.6 : 0.55);
+  let s = `<g data-id="${it.id}" transform="translate(${it.x} ${it.y})" style="cursor:${it.trava ? "pointer" : "move"}"><title>${esc(it.nome)} — ${fmt(d.w)} × ${fmt(d.h)} m</title>`;
+  if (T.forma === "circulo") {
+    const r = Math.min(d.w, d.h) / 2;
+    s += `<circle cx="${d.w / 2}" cy="${d.h / 2}" r="${r}" fill="${c}" fill-opacity="${it.t === "exaustor" ? 0.35 : 1}" stroke="${borda}" stroke-width="0.05" ${it.t === "exaustor" ? 'stroke-dasharray="0.15 0.1"' : ""}/>`;
+    if (it.t === "exaustor") s += `<circle cx="${d.w / 2}" cy="${d.h / 2}" r="${r * 0.35}" fill="${borda}"/>`;
+  } else if (T.deco === "zona") {
+    s += `<rect width="${d.w}" height="${d.h}" fill="${c}" fill-opacity="0.18" stroke="${borda}" stroke-width="0.07" stroke-dasharray="0.4 0.25" rx="0.2"/>`;
+  } else if (T.deco === "faixa") {
+    s += `<rect width="${d.w}" height="${d.h}" fill="url(#hachura)" stroke="#e0a800" stroke-width="0.06"/>`;
+  } else if (T.deco === "portao") {
+    s += `<rect width="${d.w}" height="${d.h}" fill="#ffffff" stroke="#2b2f36" stroke-width="0.05" stroke-dasharray="0.2 0.12"/>`;
+  } else {
+    s += `<rect width="${d.w}" height="${d.h}" fill="${c}" stroke="${borda}" stroke-width="0.05" rx="${T.deco === "sala" ? 0 : 0.06}"/>`;
+  }
+  if (T.deco === "trilhos") {
+    if (d.w >= d.h) {
+      s += `<rect x="0.2" y="${d.h * 0.12}" width="${d.w - 0.4}" height="${d.h * 0.26}" fill="${borda}"/>`;
+      s += `<rect x="0.2" y="${d.h * 0.62}" width="${d.w - 0.4}" height="${d.h * 0.26}" fill="${borda}"/>`;
+    } else {
+      s += `<rect y="0.2" x="${d.w * 0.12}" height="${d.h - 0.4}" width="${d.w * 0.26}" fill="${borda}"/>`;
+      s += `<rect y="0.2" x="${d.w * 0.62}" height="${d.h - 0.4}" width="${d.w * 0.26}" fill="${borda}"/>`;
+    }
+  } else if (T.deco === "colunas") {
+    const p = 0.5;
+    if (d.w >= d.h) {
+      s += `<rect x="0" y="${(d.h - p) / 2}" width="${p}" height="${p}" fill="#b81d24"/><rect x="${d.w - p}" y="${(d.h - p) / 2}" width="${p}" height="${p}" fill="#b81d24"/>`;
+    } else {
+      s += `<rect y="0" x="${(d.w - p) / 2}" width="${p}" height="${p}" fill="#b81d24"/><rect y="${d.h - p}" x="${(d.w - p) / 2}" width="${p}" height="${p}" fill="#b81d24"/>`;
+    }
+  } else if (T.deco === "sala") {
+    s += `<rect x="0.15" y="0.15" width="${Math.max(0, d.w - 0.3)}" height="${Math.max(0, d.h - 0.3)}" fill="none" stroke="#8fb8d6" stroke-width="0.06"/>`;
+  }
+  if (it.t !== "pilar") s += rotulo(it, d);
+  if (it.trava && !exporta && it.t !== "pilar") s += `<text x="${d.w - 0.12}" y="0.12" font-size="0.32" text-anchor="end" dominant-baseline="hanging" opacity="0.6">🔒</text>`;
+  if (!exporta && it.id === sel) {
+    s += `<rect x="-0.08" y="-0.08" width="${d.w + 0.16}" height="${d.h + 0.16}" fill="none" stroke="#1f6feb" stroke-width="0.08" stroke-dasharray="0.25 0.15"/>`;
+  }
+  return s + `</g>`;
+}
+
+function cotaLinha(x1, y1, x2, y2, txt) {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, vert = x1 === x2;
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#1f6feb" stroke-width="0.04" stroke-dasharray="0.15 0.1"/>` +
+    `<g transform="translate(${mx} ${my})${vert ? " rotate(-90)" : ""}"><rect x="-0.75" y="-0.22" width="1.5" height="0.44" rx="0.1" fill="#1f6feb"/>` +
+    `<text font-size="0.3" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="600">${txt}</text></g>`;
+}
+
+function conteudo(exporta) {
+  const { w: W, h: H } = estado.galpao;
+  let s = `<defs>
+    <pattern id="g1" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#cdd3db" stroke-width="0.02"/></pattern>
+    <pattern id="g5" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#g1)"/><path d="M5 0H0V5" fill="none" stroke="#aeb6c2" stroke-width="0.045"/></pattern>
+    <pattern id="hachura" width="0.6" height="0.6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="0.6" height="0.6" fill="#ffd166" fill-opacity="0.55"/><rect width="0.3" height="0.6" fill="#2b2f36" fill-opacity="0.18"/></pattern>
+  </defs><g font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">`;
+  s += `<rect data-fundo="1" x="0" y="0" width="${W}" height="${H}" fill="#f3f5f8"/>`;
+  if (grade) s += `<rect data-fundo="1" x="0" y="0" width="${W}" height="${H}" fill="url(#g5)"/>`;
+  s += `<rect x="-0.15" y="-0.15" width="${W + 0.3}" height="${H + 0.3}" fill="none" stroke="#2b2f36" stroke-width="0.3"/>`;
+  // cotas do galpão
+  s += `<g fill="#5b6475" font-size="0.45" text-anchor="middle">`;
+  for (let x = 0; x <= W + 0.001; x += 5) s += `<line x1="${x}" y1="-0.5" x2="${x}" y2="-0.8" stroke="#8a93a3" stroke-width="0.04"/><text x="${x}" y="-1.05">${x}</text>`;
+  for (let y = 0; y <= H + 0.001; y += 5) s += `<line x1="-0.5" y1="${y}" x2="-0.8" y2="${y}" stroke="#8a93a3" stroke-width="0.04"/><text x="-1.25" y="${y}" dominant-baseline="central">${y}</text>`;
+  s += `<text x="${W / 2}" y="${H + 1.1}" font-weight="700" fill="#1d2433">${fmt(W)} m × ${fmt(H)} m</text></g>`;
+  const ord = [...estado.itens].sort((a, b) => (TIPOS[a.t].camada ?? 1) - (TIPOS[b.t].camada ?? 1));
+  for (const it of ord) s += desenhaItem(it, exporta);
+  if (!exporta && medidas && sel) {
+    const it = acha(sel);
+    if (it) {
+      const d = dims(it), cx = it.x + d.w / 2, cy = it.y + d.h / 2;
+      if (it.x > 0.3) s += cotaLinha(0, cy, it.x, cy, fmt(it.x) + " m");
+      if (W - it.x - d.w > 0.3) s += cotaLinha(it.x + d.w, cy, W, cy, fmt(W - it.x - d.w) + " m");
+      if (it.y > 0.3) s += cotaLinha(cx, 0, cx, it.y, fmt(it.y) + " m");
+      if (H - it.y - d.h > 0.3) s += cotaLinha(cx, it.y + d.h, cx, H, fmt(H - it.y - d.h) + " m");
+    }
+  }
+  return s + `</g>`;
+}
+
+function render() {
+  svg.innerHTML = conteudo(false);
+  aplicaVB();
+}
+function aplicaVB() { svg.setAttribute("viewBox", `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); }
+function ajustar() {
+  const { w: W, h: H } = estado.galpao;
+  const cw = svg.clientWidth || 800, ch = svg.clientHeight || 500;
+  const bw = W + 4, bh = H + 4, asp = cw / ch;
+  if (bw / bh > asp) { vb.w = bw; vb.h = bw / asp; } else { vb.h = bh; vb.w = bh * asp; }
+  vb.x = W / 2 - vb.w / 2; vb.y = H / 2 - vb.h / 2 + 0.2;
+  aplicaVB();
+}
+function zoomEm(cx, cy, f) {
+  const p = ponto(cx, cy);
+  const nw = vb.w * f;
+  if (nw < 3 || nw > 600) return;
+  vb.x = p.x - (p.x - vb.x) * f; vb.y = p.y - (p.y - vb.y) * f;
+  vb.w = nw; vb.h *= f; aplicaVB();
+}
+function ponto(cx, cy) {
+  const p = svg.createSVGPoint(); p.x = cx; p.y = cy;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+// ---------- Interação no desenho ----------
+const ptrs = new Map();
+let arraste = null, pan = null, pinca = null;
+const status = document.getElementById("status");
+
+svg.addEventListener("pointerdown", e => {
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  svg.setPointerCapture(e.pointerId);
+  if (ptrs.size === 2) {
+    arraste = null; pan = null;
+    const [a, b] = [...ptrs.values()];
+    pinca = { d: Math.hypot(a.x - b.x, a.y - b.y) };
+    return;
+  }
+  const g = e.target.closest("[data-id]");
+  if (g) {
+    const it = acha(g.dataset.id);
+    if (sel !== it.id) { sel = it.id; render(); painel(); }
+    if (!it.trava) {
+      const p = ponto(e.clientX, e.clientY);
+      arraste = { id: it.id, dx: p.x - it.x, dy: p.y - it.y, antes: JSON.stringify(estado), moveu: false };
+    }
+  } else {
+    if (sel) { sel = null; render(); painel(); }
+    pan = { cx: e.clientX, cy: e.clientY, x: vb.x, y: vb.y };
+    svg.classList.add("panning");
+  }
+});
+svg.addEventListener("pointermove", e => {
+  const p = ponto(e.clientX, e.clientY);
+  status.textContent = `x ${fmt(Math.max(0, p.x))} m · y ${fmt(Math.max(0, p.y))} m · ${estado.itens.length} itens`;
+  if (!ptrs.has(e.pointerId)) return;
+  const ant = ptrs.get(e.pointerId);
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinca && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d > 0 && pinca.d > 0) zoomEm((a.x + b.x) / 2, (a.y + b.y) / 2, pinca.d / d);
+    pinca.d = d;
+    return;
+  }
+  if (arraste) {
+    const it = acha(arraste.id), d = dims(it), { w: W, h: H } = estado.galpao;
+    const nx = Math.min(Math.max(snap(p.x - arraste.dx), -1), W - d.w + 1);
+    const ny = Math.min(Math.max(snap(p.y - arraste.dy), -1), H - d.h + 1);
+    if (nx !== it.x || ny !== it.y) {
+      if (!arraste.moveu) { hist.push(arraste.antes); fut = []; arraste.moveu = true; }
+      it.x = nx; it.y = ny; render();
+    }
+  } else if (pan) {
+    const esc = Math.max(vb.w / svg.clientWidth, vb.h / svg.clientHeight);
+    vb.x = pan.x - (e.clientX - pan.cx) * esc;
+    vb.y = pan.y - (e.clientY - pan.cy) * esc;
+    aplicaVB();
+  }
+});
+function solta(e) {
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinca = null;
+  if (arraste && arraste.moveu) { guardar(); painel(); botoes(); }
+  arraste = null; pan = null;
+  svg.classList.remove("panning");
+}
+svg.addEventListener("pointerup", solta);
+svg.addEventListener("pointercancel", solta);
+svg.addEventListener("wheel", e => { e.preventDefault(); zoomEm(e.clientX, e.clientY, e.deltaY > 0 ? 1.12 : 1 / 1.12); }, { passive: false });
+svg.addEventListener("dblclick", e => {
+  const g = e.target.closest("[data-id]");
+  if (g) { const n = document.getElementById("fNome"); if (n) { n.focus(); n.select(); } }
+});
+
+// ---------- Ações em itens ----------
+function altera(fn) { const it = acha(sel); if (!it) return; snapshot(); fn(it); mudou(); }
+function girar() { altera(it => { it.rot = it.rot === 90 ? 0 : 90; const d = dims(it), G = estado.galpao; it.x = Math.min(it.x, G.w - d.w + 1); it.y = Math.min(it.y, G.h - d.h + 1); }); }
+function duplicar() {
+  const it = acha(sel); if (!it) return;
+  snapshot();
+  const n = Object.assign({}, it, { id: uid(), x: it.x + 0.5, y: it.y + 0.5, trava: false });
+  estado.itens.push(n); sel = n.id; mudou();
+}
+function apagar() {
+  const it = acha(sel); if (!it) return;
+  snapshot(); estado.itens = estado.itens.filter(i => i.id !== sel); sel = null; mudou();
+}
+function adicionar(t) {
+  snapshot();
+  const T = TIPOS[t], G = estado.galpao;
+  const cx = Math.min(Math.max(vb.x + vb.w / 2, 0), G.w), cy = Math.min(Math.max(vb.y + vb.h / 2, 0), G.h);
+  const it = I(t, snap(Math.max(0, Math.min(cx - T.w / 2, G.w - T.w))), snap(Math.max(0, Math.min(cy - T.h / 2, G.h - T.h))));
+  estado.itens.push(it); sel = it.id; mudou();
+  toast(`${T.nome} adicionado no centro da tela`);
+}
+
+// ---------- Painel lateral ----------
+const painelSel = document.getElementById("painelSel");
+function painel() {
+  const it = sel && acha(sel);
+  if (!it) {
+    painelSel.innerHTML = `<p class="vazio">Clica num equipamento da planta pra editar. Itens com 🔒 (paredes, pilares, salas) estão travados: seleciona e destrava pra mover.</p>`;
+    return;
+  }
+  const T = TIPOS[it.t];
+  painelSel.innerHTML = `
+    <div class="campos">
+      <label class="full">Nome<input type="text" id="fNome" value="${esc(it.nome)}"></label>
+      <label>Largura (m)<input type="number" id="fW" step="0.1" min="0.1" value="${r2(it.w)}"></label>
+      <label>Profundidade (m)<input type="number" id="fH" step="0.1" min="0.1" value="${r2(it.h)}"></label>
+      <label>Posição X (m)<input type="number" id="fX" step="0.25" value="${r2(it.x)}"></label>
+      <label>Posição Y (m)<input type="number" id="fY" step="0.25" value="${r2(it.y)}"></label>
+      <label>Cor<input type="color" id="fCor" value="${corDe(it)}"></label>
+      <label>Tipo<input type="text" value="${esc(T.nome)}" disabled></label>
+    </div>
+    <div class="acoes">
+      <button id="aGirar" ${it.trava ? "disabled" : ""}>⟳ Girar 90°</button>
+      <button id="aDup">⧉ Duplicar</button>
+      <button id="aTrava">${it.trava ? "🔓 Destravar" : "🔒 Travar"}</button>
+      <button id="aApagar" class="danger" ${it.trava ? "disabled" : ""}>🗑 Apagar</button>
+    </div>`;
+  const num = (id, campo, min) => document.getElementById(id).addEventListener("change", ev => {
+    const v = parseFloat(String(ev.target.value).replace(",", "."));
+    if (!isFinite(v) || (min != null && v < min)) { painel(); return; }
+    altera(i => { i[campo] = r2(v); });
+  });
+  num("fW", "w", 0.1); num("fH", "h", 0.1); num("fX", "x"); num("fY", "y");
+  document.getElementById("fNome").addEventListener("change", ev => { const v = ev.target.value.trim(); if (v) altera(i => { i.nome = v; }); });
+  document.getElementById("fCor").addEventListener("change", ev => altera(i => { i.cor = ev.target.value; }));
+  document.getElementById("aGirar").onclick = girar;
+  document.getElementById("aDup").onclick = duplicar;
+  document.getElementById("aTrava").onclick = () => altera(i => { i.trava = !i.trava; });
+  document.getElementById("aApagar").onclick = apagar;
+}
+
+function montaPaleta() {
+  let s = "";
+  for (const [c, C] of Object.entries(CAT)) {
+    s += `<h2>${C.nome}</h2><div class="paleta">`;
+    for (const [t, T] of Object.entries(TIPOS)) if (T.cat === c) {
+      s += `<button data-add="${t}"><span class="cor" style="background:${T.cor || C.cor}"></span>${T.nome}<small>${fmt(T.w)}×${fmt(T.h)}</small></button>`;
+    }
+    s += `</div>`;
+  }
+  const p = document.getElementById("paleta");
+  p.innerHTML = s;
+  p.addEventListener("click", e => { const b = e.target.closest("[data-add]"); if (b) adicionar(b.dataset.add); });
+}
+
+function botoes() {
+  document.getElementById("bDesfazer").disabled = !hist.length;
+  document.getElementById("bRefazer").disabled = !fut.length;
+  document.getElementById("bGrade").classList.toggle("primary", grade);
+  document.getElementById("bMedidas").classList.toggle("primary", medidas);
+  document.getElementById("gW").value = estado.galpao.w;
+  document.getElementById("gH").value = estado.galpao.h;
+}
+
+// ---------- Arquivo / compartilhar ----------
+const toastEl = document.getElementById("toast");
+let toastT;
+function toast(m) { toastEl.textContent = m; toastEl.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("on"), 2600); }
+function compacto() {
+  return { galpao: estado.galpao, itens: estado.itens.map(({ id, ...r }) => {
+    const T = TIPOS[r.t], o = { t: r.t, x: r.x, y: r.y };
+    if (r.nome !== T.nome) o.nome = r.nome;
+    if (r.w !== T.w) o.w = r.w;
+    if (r.h !== T.h) o.h = r.h;
+    if (r.rot) o.rot = r.rot;
+    if (r.trava) o.trava = true;
+    if (r.cor) o.cor = r.cor;
+    return o;
+  }) };
+}
+function expande(o) {
+  o.itens = o.itens.map(i => Object.assign({ nome: TIPOS[i.t]?.nome, w: TIPOS[i.t]?.w, h: TIPOS[i.t]?.h, rot: 0, trava: false }, i));
+  return o;
+}
+const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+async function copia(txt, ok) {
+  try { await navigator.clipboard.writeText(txt); toast(ok); }
+  catch (e) { window.prompt("Copia aqui:", txt); }
+}
+function baixa(nome, blob) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = nome;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const data = () => new Date().toISOString().slice(0, 10);
+
+document.getElementById("bLink").onclick = () => {
+  const url = location.href.split("#")[0] + "#l=" + b64e(JSON.stringify(compacto()));
+  copia(url, "Link copiado! Quem abrir vê este layout.");
+};
+document.getElementById("bCopiar").onclick = () => copia(JSON.stringify(compacto()), "Layout copiado como texto.");
+document.getElementById("bJson").onclick = () => baixa(`layout-oficina-${data()}.json`, new Blob([JSON.stringify(compacto(), null, 1)], { type: "application/json" }));
+document.getElementById("bAbrir").onclick = () => document.getElementById("arquivo").click();
+document.getElementById("arquivo").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const o = normaliza(expande(JSON.parse(await f.text())));
+    if (!valida(o)) throw 0;
+    snapshot(); estado = o; sel = null; mudou(); ajustar(); toast("Layout carregado.");
+  } catch (err) { toast("Esse arquivo não é um layout válido ;-;"); }
+  e.target.value = "";
+};
+document.getElementById("bPng").onclick = () => {
+  const { w: W, h: H } = estado.galpao, m = 2.5, S = 40;
+  const vw = W + 2 * m, vh = H + 2 * m + 1;
+  const src = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-m} ${-m - 1} ${vw} ${vh}" width="${vw * S}" height="${vh * S}">` +
+    `<rect x="${-m}" y="${-m - 1}" width="${vw}" height="${vh}" fill="#ffffff"/>` +
+    `<text x="0" y="${-m + 0.1}" font-family="system-ui, sans-serif" font-size="0.7" font-weight="700" fill="#1d2433">Layout da Oficina Automobilística — ${data()}</text>` +
+    conteudo(true) + `</svg>`;
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement("canvas"); cv.width = vw * S; cv.height = vh * S;
+    cv.getContext("2d").drawImage(img, 0, 0);
+    cv.toBlob(b => baixa(`layout-oficina-${data()}.png`, b), "image/png");
+  };
+  img.onerror = () => toast("Não rolou gerar a imagem TwT");
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(src);
+};
+document.getElementById("bReset").onclick = () => {
+  if (!confirm("Voltar pro layout atual (o das fotos)? Dá pra desfazer depois com Ctrl+Z.")) return;
+  snapshot(); estado = layoutAtual(); sel = null; mudou(); ajustar();
+};
+document.getElementById("bDesfazer").onclick = desfazer;
+document.getElementById("bRefazer").onclick = refazer;
+document.getElementById("bGrade").onclick = () => { grade = !grade; render(); botoes(); };
+document.getElementById("bMedidas").onclick = () => { medidas = !medidas; render(); botoes(); };
+document.getElementById("zMais").onclick = () => { const r = svg.getBoundingClientRect(); zoomEm(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25); };
+document.getElementById("zMenos").onclick = () => { const r = svg.getBoundingClientRect(); zoomEm(r.left + r.width / 2, r.top + r.height / 2, 1.25); };
+document.getElementById("zAjustar").onclick = ajustar;
+for (const [id, k] of [["gW", "w"], ["gH", "h"]]) {
+  document.getElementById(id).addEventListener("change", e => {
+    const v = parseFloat(String(e.target.value).replace(",", "."));
+    if (!(v >= 5 && v <= 200)) { botoes(); return; }
+    snapshot(); estado.galpao[k] = r2(v); mudou(); ajustar();
+  });
+}
+
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea")) return;
+  const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (ctrl && k === "z" && !e.shiftKey) { e.preventDefault(); desfazer(); return; }
+  if (ctrl && (k === "y" || (k === "z" && e.shiftKey))) { e.preventDefault(); refazer(); return; }
+  if (e.key === "Escape") { sel = null; render(); painel(); return; }
+  const it = sel && acha(sel); if (!it) return;
+  if (ctrl) return;
+  if (k === "r" && !it.trava) girar();
+  else if (k === "d") duplicar();
+  else if ((e.key === "Delete" || e.key === "Backspace") && !it.trava) { e.preventDefault(); apagar(); }
+  else if (e.key.startsWith("Arrow") && !it.trava) {
+    e.preventDefault();
+    const p = e.shiftKey ? 1 : 0.25;
+    altera(i => {
+      if (e.key === "ArrowLeft") i.x = r2(i.x - p);
+      if (e.key === "ArrowRight") i.x = r2(i.x + p);
+      if (e.key === "ArrowUp") i.y = r2(i.y - p);
+      if (e.key === "ArrowDown") i.y = r2(i.y + p);
+    });
+  }
+});
+
+// ---------- Início ----------
+function carrega() {
+  const m = location.hash.match(/^#l=([\w-]+)/);
+  if (m) {
+    try {
+      const o = normaliza(expande(JSON.parse(b64d(m[1]))));
+      if (valida(o)) { document.getElementById("tagEstado").textContent = "Layout aberto pelo link"; return o; }
+    } catch (e) {}
+  }
+  try {
+    const salvo = localStorage.getItem(CHAVE);
+    if (salvo) { const o = normaliza(JSON.parse(salvo)); if (valida(o)) return o; }
+  } catch (e) {}
+  return layoutAtual();
+}
+estado = carrega();
+if (location.hash) { try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} guardar(); }
+montaPaleta();
+render(); painel(); botoes();
+ajustar();
+let rT; window.addEventListener("resize", () => { clearTimeout(rT); rT = setTimeout(ajustar, 120); });
+})();
+</script>
 </body>
 </html>
